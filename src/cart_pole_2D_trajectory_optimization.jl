@@ -104,9 +104,9 @@ cons_jac_prototype = get_cons_jac_prototype(optim_cons_lb, p_optim, optim_var_gu
 
 ## Optimization - Problem construction ##
 opt_fun = OptimizationFunction(least_effort, Optimization.AutoForwardDiff();
-                               cons=cons!)
-                            #    cons_jac_prototype=cons_jac_prototype)
-
+                               cons=cons!,
+                               cons_jac_prototype=cons_jac_prototype) # BREAKING ARGUMENT
+                               
 opt_prob = OptimizationProblem(opt_fun, optim_var_guess, p_optim;
                                lcons=optim_cons_lb,
                                ucons=optim_cons_ub,
