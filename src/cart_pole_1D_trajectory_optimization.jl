@@ -44,7 +44,7 @@ odeprob = ODEProblem(ssys, [], (0.0, 1.0))
 f_oop(x, u, p, t) = f(similar(x), x, u, p, t) # f_oop : (x,u,p,t)->xdot(t)
 
 ## Optimization function parameters ##
-p_optim = (N_segments=100,
+p_optim = (N_segments=25,
            method="Hermite-Simpson",
            dyn_func=f_oop,
            N_states=length(odeprob.u0),
@@ -73,8 +73,8 @@ lb_x_vec = vec(collect(reduce(hcat, [lb_x for i = 1:p_optim[:N_segments]+1]))')
 ub_x_vec = vec(collect(reduce(hcat, [ub_x for i = 1:p_optim[:N_segments]+1]))')
 # Duration of the trajectory
 t_final_guess = 2.0
-lb_t_final = 1.0
-ub_t_final = 10.0
+lb_t_final = 2.0
+ub_t_final = 2.0
 
 optim_var_guess = vcat(vec(u_guess), vec(x_guess), t_final_guess)
 optim_var_lb = vcat(lb_u_vec, lb_x_vec, lb_t_final)
