@@ -44,7 +44,8 @@ function get_cons_jac_prototype(optim_cons_lb, p_optim, optim_var_guess)
     end
 
     J_dense = jacobian(cons_oop, AutoForwardDiff(), rand(length(optim_var_guess)))
-    cons_jac_prototype = sparse(J_dense)
+    J_ones_dense = Float64.((J_dense .!= 0))
+    cons_jac_prototype = sparse(J_ones_dense)
 
     return cons_jac_prototype
 end
