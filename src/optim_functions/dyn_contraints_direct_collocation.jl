@@ -18,11 +18,12 @@ function dyn_contraints_direct_collocation(x, u, p, t, N_segments, N_states; f=N
             end
         end
     elseif method == "Hermite-Simpson"
-        for k = 1:N_segments
-            u_mid = 1 / 2 * (u[k+1, :] + u[k, :])
-            x_mid = 1 / 2 * (x[k+1, :] + x[k, :]) + 1 / 8 * (t[k+1] - t[k]) * (f(x[k, :], u[k, :], p, t[k]) - f(x[k+1, :], u[k+1, :], p, t[k+1]))
-            for i = 1:N_states
-                r[(N_states*(k-1)+i)] = 1 / 6 * (t[k+1] - t[k]) *
+        for i = 1:N_states
+            for k = 1:N_segments
+                u_mid = 1 / 2 * (u[k+1, :] + u[k, :])
+                x_mid = 1 / 2 * (x[k+1, :] + x[k, :]) + 1 / 8 * (t[k+1] - t[k]) * (f(x[k, :], u[k, :], p, t[k]) - f(x[k+1, :], u[k+1, :], p, t[k+1]))
+            
+                r[k+(i-1)*N_segments] = 1 / 6 * (t[k+1] - t[k]) *
                                         (f(x[k, :], u[k, :], p, t[k])[i] + 4 * f(x_mid, u_mid, p, t[k] + 1 / 2 * (t[k+1] - t[k]))[i] +
                                          f(x[k+1, :], u[k+1, :], p, t[k+1])[i]) .- (x[k+1, i] - x[k, i])
             end
