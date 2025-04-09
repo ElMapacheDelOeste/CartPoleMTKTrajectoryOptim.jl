@@ -69,16 +69,16 @@ x_tf = [-pi, 1.0, 0.0, 0.0] # [phi, s, omega, v]
 x_guess = collect(reduce(hcat, ([x_t0 + (x_tf - x_t0) * (i - 1) / p_optim[:N_segments] for i = 1:p_optim[:N_segments]+1]))')
 lb_x = [-2*pi, 0.0, -Inf, -Inf] # [phi, s, omega, v]
 ub_x = [pi, 3.0, Inf, Inf] # [phi, s, omega, v]
-lb_x_vec = vec(collect(reduce(hcat, [lb_x for i = 1:p_optim[:N_segments]+1]))')
-ub_x_vec = vec(collect(reduce(hcat, [ub_x for i = 1:p_optim[:N_segments]+1]))')
+lb_x_mat = collect(reduce(hcat, [lb_x for i = 1:p_optim[:N_segments]+1])')
+ub_x_mat = collect(reduce(hcat, [ub_x for i = 1:p_optim[:N_segments]+1])')
 # Duration of the trajectory
 t_final_guess = 2.0
 lb_t_final = 2.0
 ub_t_final = 2.0
 
-optim_var_guess = vcat(vec(u_guess), vec(x_guess), t_final_guess)
-optim_var_lb = vcat(lb_u_vec, lb_x_vec, lb_t_final)
-optim_var_ub = vcat(ub_u_vec, ub_x_vec, ub_t_final)
+optim_var_guess = vcat(vec(hcat(u_guess, x_guess)'), t_final_guess)
+optim_var_lb = vcat(vec(hcat(lb_u_vec, lb_x_mat)'), lb_t_final)
+optim_var_ub = vcat(vec(hcat(ub_u_vec, ub_x_mat)'), ub_t_final)
 
 ## Add parameters for the optimization functions ##
 p_optim = (p_optim...,
@@ -94,12 +94,11 @@ p_optim = (p_optim...,
 optim_cons_lb = zeros(length(vcat(u_t0, u_tf, x_t0, x_tf)) + p_optim[:N_segments] * p_optim[:N_states])
 optim_cons_ub = zeros(length(vcat(u_t0, u_tf, x_t0, x_tf)) + p_optim[:N_segments] * p_optim[:N_states])
 
-cons_jac_prototype = get_cons_jac_prototype(optim_cons_lb, p_optim, optim_var_guess)
+cons_jac_prototype = get_cons_jac_prototype(optim_cons_lb, p_optim, optim_var_lb)
 
 ## Optimization - Problem construction ##
 opt_fun = OptimizationFunction(least_effort, Optimization.AutoForwardDiff();
                                cons=cons!,
-                            #    hess_prototype=Symbolics.hessian_sparsity(least_effort, optim_var_guess, p_optim),
                                cons_jac_prototype=cons_jac_prototype)
 
 opt_prob = OptimizationProblem(opt_fun, optim_var_guess, p_optim;
@@ -116,8 +115,9 @@ opt_solver = OptimizationMOI.MOI.OptimizerWithAttributes(Ipopt.Optimizer,
 opt_solve = solve(opt_prob, opt_solver)
 
 ### Reshape solution ###
-f_sol = reshape(opt_solve.u[1:p_optim[:size_u][1]*p_optim[:size_u][2]], p_optim[:size_u])
-x_sol = reshape(opt_solve.u[(size(f_sol, 1)*size(f_sol, 2)).+(1:size(x_guess)[1]*size(x_guess)[2])], size(x_guess))
+mat_sol = collect(reshape(opt_solve.u[1:end-1],p_optim[:size_x][2]+ p_optim[:size_u][2], p_optim[:size_u][1])')
+f_sol = mat_sol[:, 1:p_optim[:size_u][2]]
+x_sol = mat_sol[:, p_optim[:size_u][2]+1:end]
 t_final_sol = opt_solve.u[end]
 
 ### Test solution through simulation ###

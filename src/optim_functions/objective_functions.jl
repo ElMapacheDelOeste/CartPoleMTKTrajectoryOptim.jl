@@ -1,6 +1,7 @@
 function least_effort(optim_var, p_optim)
     # Unpack decision variables
-    u = reshape(optim_var[1:p_optim[:size_u][1]*p_optim[:size_u][2]], p_optim[:size_u])
+    optim_var_mat = collect(reshape(optim_var[1:end-1],p_optim[:size_x][2]+ p_optim[:size_u][2], p_optim[:size_u][1])')
+    u = optim_var_mat[:, 1:p_optim[:size_u][2]]
     t_final = optim_var[end]
     # Unpack parameters
     N_seg = p_optim[:N_segments]

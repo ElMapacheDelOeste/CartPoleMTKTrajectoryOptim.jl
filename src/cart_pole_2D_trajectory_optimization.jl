@@ -67,24 +67,24 @@ u_tf = [0.0, 0.0]  # [force_x, force_y]
 u_guess = zeros(p_optim[:N_segments] + 1, 2)
 lb_u = [-20.0, -20.0]
 ub_u = [20.0, 20.0]
-lb_u_vec = vec(collect(reduce(hcat, [lb_u for i = 1:p_optim[:N_segments]+1]))')
-ub_u_vec = vec(collect(reduce(hcat, [ub_u for i = 1:p_optim[:N_segments]+1]))')
+lb_u_mat = collect(reduce(hcat, [lb_u for i = 1:p_optim[:N_segments]+1]))'
+ub_u_mat = collect(reduce(hcat, [ub_u for i = 1:p_optim[:N_segments]+1]))'
 # State variables
 x_t0 = [-pi/4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # [revolute_b.phi, revolute_a.phi, rail_y.s, rail_x.s, revolute_b.omega, revolute_a.omega, rail_y.v, rail_x.v]
 x_tf = [0.0, pi, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0] # [revolute_b.phi, revolute_a.phi, rail_y.s, rail_x.s, revolute_b.omega, revolute_a.omega, rail_y.v, rail_x.v]
 x_guess = collect(reduce(hcat, ([x_t0 + (x_tf - x_t0) * (i - 1) / p_optim[:N_segments] for i = 1:p_optim[:N_segments]+1]))')
 lb_x = [-pi/4, -3/4*pi, -1.5, 0.0, -Inf, -Inf, -Inf, -Inf] # [revolute_b.phi, revolute_a.phi, rail_y.s, rail_x.s, revolute_b.omega, revolute_a.omega, rail_y.v, rail_x.v]
 ub_x = [pi/4, pi, 1.5, 3.0, Inf, Inf, Inf, Inf] # [revolute_b.phi, revolute_a.phi, rail_y.s, rail_x.s, revolute_b.omega, revolute_a.omega, rail_y.v, rail_x.v]
-lb_x_vec = vec(collect(reduce(hcat, [lb_x for i = 1:p_optim[:N_segments]+1]))')
-ub_x_vec = vec(collect(reduce(hcat, [ub_x for i = 1:p_optim[:N_segments]+1]))')
+lb_x_mat = collect(reduce(hcat, [lb_x for i = 1:p_optim[:N_segments]+1])')
+ub_x_mat = collect(reduce(hcat, [ub_x for i = 1:p_optim[:N_segments]+1])')
 # Duration of the trajectory
 t_final_guess = 2.0
 lb_t_final = 1.0
 ub_t_final = 10.0
 
-optim_var_guess = vcat(vec(u_guess), vec(x_guess), t_final_guess)
-optim_var_lb = vcat(lb_u_vec, lb_x_vec, lb_t_final)
-optim_var_ub = vcat(ub_u_vec, ub_x_vec, ub_t_final)
+optim_var_guess = vcat(vec(hcat(u_guess, x_guess)'), t_final_guess)
+optim_var_lb = vcat(vec(hcat(lb_u_mat, lb_x_mat)'), lb_t_final)
+optim_var_ub = vcat(vec(hcat(ub_u_mat, ub_x_mat)'), ub_t_final)
 
 ## Add parameters for the optimization functions ##
 p_optim = (p_optim...,
@@ -100,7 +100,7 @@ p_optim = (p_optim...,
 optim_cons_lb = zeros(length(vcat(u_t0, u_tf, x_t0, x_tf)) + p_optim[:N_segments] * p_optim[:N_states])
 optim_cons_ub = zeros(length(vcat(u_t0, u_tf, x_t0, x_tf)) + p_optim[:N_segments] * p_optim[:N_states])
 
-cons_jac_prototype = get_cons_jac_prototype(optim_cons_lb, p_optim, optim_var_guess)
+cons_jac_prototype = get_cons_jac_prototype(optim_cons_lb, p_optim, optim_var_lb)
 
 ## Optimization - Problem construction ##
 opt_fun = OptimizationFunction(least_effort, Optimization.AutoForwardDiff();
@@ -120,8 +120,10 @@ opt_solver = OptimizationMOI.MOI.OptimizerWithAttributes(Ipopt.Optimizer,
 
 opt_solve = solve(opt_prob, opt_solver)
 
-f_sol = reshape(opt_solve.u[1:p_optim[:size_u][1]*p_optim[:size_u][2]], p_optim[:size_u])
-x_sol = reshape(opt_solve.u[(size(f_sol, 1)*size(f_sol, 2)).+(1:size(x_guess)[1]*size(x_guess)[2])], size(x_guess))
+### Reshape solution ###
+mat_sol = collect(reshape(opt_solve.u[1:end-1],p_optim[:size_x][2]+ p_optim[:size_u][2], p_optim[:size_u][1])')
+f_sol = mat_sol[:, 1:p_optim[:size_u][2]]
+x_sol = mat_sol[:, p_optim[:size_u][2]+1:end]
 t_final_sol = opt_solve.u[end]
 
 ### Test solution through simulation ###
